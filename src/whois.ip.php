@@ -1,254 +1,270 @@
 <?php
-/**
- * @license http://www.gnu.org/licenses/gpl-2.0.html GNU General Public License, version 2
- * @license
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
- * 
- * @link http://phpwhois.pw
- * @copyright Copyright (C)1999,2005 easyDNS Technologies Inc. & Mark Jeftovic
- * @copyright Maintained by David Saez
- * @copyright Copyright (c) 2014 Dmitry Lukashin
+/*
+Whois.php        PHP classes to conduct whois queries
+
+Copyright (C)1999,2005 easyDNS Technologies Inc. & Mark Jeftovic
+
+Maintained by David Saez
+
+For the most recent version of this package visit:
+
+http://www.phpwhois.org
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-if (!defined('__IP_HANDLER__'))
-    define('__IP_HANDLER__', 1);
+if ( ! defined( '__IP_HANDLER__' ) ) {
+	define( '__IP_HANDLER__', 1 );
+}
 
-use phpWhois\WhoisClient;
+require_once( 'whois.ip.lib.php' );
 
 class ip_handler extends WhoisClient {
 
-    /** @var Deep whois? */
-    public $deepWhois = true;
-    public $REGISTRARS = array(
-        'European Regional Internet Registry/RIPE NCC' => 'whois.ripe.net',
-        'RIPE Network Coordination Centre' => 'whois.ripe.net',
-        'Asia Pacific Network Information	Center' => 'whois.apnic.net',
-        'Asia Pacific Network Information Centre' => 'whois.apnic.net',
-        'Latin American and Caribbean IP address Regional Registry' => 'whois.lacnic.net',
-        'African Network Information Center' => 'whois.afrinic.net'
-    );
-    public $HANDLERS = array(
-        'whois.krnic.net' => 'krnic',
-        'whois.apnic.net' => 'apnic',
-        'whois.ripe.net' => 'ripe',
-        'whois.arin.net' => 'arin',
-        'whois.lacnic.net' => 'lacnic',
-        'whois.afrinic.net' => 'afrinic'
-    );
-    public $more_data = array(); // More queries to get more accurated data
-    public $done = array();
+	// Deep whois ?
+	var $deep_whois = true;
 
-    public function parse($data, $query) {
-        $result = array(
-            'regrinfo' => array(),
-            'regyinfo' => array(),
-            'rawdata' => array(),
-        );
-        $result['regyinfo']['registrar'] = 'American Registry for Internet Numbers (ARIN)';
+	var $HANDLER_VERSION = '1.0';
 
-        if (strpos($query, '.') === false)
-            $result['regyinfo']['type'] = 'AS';
-        else
-            $result['regyinfo']['type'] = 'ip';
+	var $REGISTRARS = array(
+		'European Regional Internet Registry/RIPE NCC' => 'whois.ripe.net',
+		'RIPE Network Coordination Centre'             => 'whois.ripe.net',
+		'Asia Pacific Network Information	Center'    => 'whois.apnic.net',
+		'Asia Pacific Network Information Centre'      => 'whois.apnic.net',
+		'Latin American and Caribbean IP address Regional Registry' => 'whois.lacnic.net',
+		'African Network Information Center'           => 'whois.afrinic.net',
+	);
 
-        if (!$this->deepWhois)
-            return null;
+	var $HANDLERS = array(
+		'whois.krnic.net'   => 'krnic',
+		'whois.apnic.net'   => 'apnic',
+		'whois.ripe.net'    => 'ripe',
+		'whois.arin.net'    => 'arin',
+		'whois.lacnic.net'  => 'lacnic',
+		'whois.afrinic.net' => 'afrinic',
+	);
 
-        $this->query = array();
-        $this->query['server'] = 'whois.arin.net';
-        $this->query['query'] = $query;
+	var $more_data = array();   // More queries to get more accurated data
+	var $done      = array();
 
-        $rawdata = $data['rawdata'];
+	function parse( $data, $query ) {
+		$result['regrinfo']              = array();
+		$result['regyinfo']              = array();
+		$result['regyinfo']['registrar'] = 'American Registry for Internet Numbers (ARIN)';
+		$result['rawdata']               = array();
 
-        if (empty($rawdata))
-            return $result;
+		if ( strpos( $query, '.' ) === false ) {
+			$result['regyinfo']['type'] = 'AS';
+		} else {
+			$result['regyinfo']['type'] = 'ip';
+		}
 
-        $presults = array();
-        $presults[] = $rawdata;
-        $ip = ip2long($query);
-        $done = array();
+		if ( ! $this->deep_whois ) {
+			return null;
+		}
 
-        while (count($presults) > 0) {
-            $rwdata = array_shift($presults);
-            $found = false;
+		$this->Query           = array();
+		$this->Query['server'] = 'whois.arin.net';
+		$this->Query['query']  = $query;
 
-            foreach ($rwdata as $line) {
-                if (!strncmp($line, 'American Registry for Internet Numbers', 38))
-                    continue;
+		$rawdata = $data['rawdata'];
 
-                $p = strpos($line, '(NETBLK-');
+		if ( empty( $rawdata ) ) {
+			return $result;
+		}
 
-                if ($p === false)
-                    $p = strpos($line, '(NET-');
+		$presults[] = $rawdata;
+		$ip         = ip2long( $query );
+		$done       = array();
 
-                if ($p !== false) {
-                    $net = strtok(substr($line, $p + 1), ') ');
-                    list($low, $high) = explode('-', str_replace(' ', '', substr($line, $p + strlen($net) + 3)));
+		while ( count( $presults ) > 0 ) {
+			$rwdata = array_shift( $presults );
+			$found  = false;
 
-                    if (!isset($done[$net]) && $ip >= ip2long($low) && $ip <= ip2long($high)) {
-                        $owner = substr($line, 0, $p - 1);
+			foreach ( $rwdata as $line ) {
+				if ( ! strncmp( $line, 'American Registry for Internet Numbers', 38 ) ) {
+					continue;
+				}
 
-                        if (!empty($this->REGISTRARS['owner'])) {
-                            $this->handle_rwhois($this->REGISTRARS['owner'], $query);
-                            break 2;
-                        } else {
-                            $this->query['args'] = 'n ' . $net;
-                            $presults[] = $this->getRawData($net);
-                            $done[$net] = 1;
-                        }
-                    }
-                    $found = true;
-                }
-            }
+				$p = strpos( $line, '(NETBLK-' );
 
-            if (!$found) {
-                $this->query['file'] = 'whois.ip.arin.php';
-                $this->query['handler'] = 'arin';
-                $result = $this->parse_results($result, $rwdata, $query, true);
-            }
-        }
+				if ( $p === false ) {
+					$p = strpos( $line, '(NET-' );
+				}
 
-        unset($this->query['args']);
+				if ( $p !== false ) {
+					$net             = strtok( substr( $line, $p + 1 ), ') ' );
+					list($low,$high) = explode( '-', str_replace( ' ', '', substr( $line, $p + strlen( $net ) + 3 ) ) );
 
-        while (count($this->more_data) > 0) {
-            $srv_data = array_shift($this->more_data);
-            $this->query['server'] = $srv_data['server'];
-            unset($this->query['handler']);
-            // Use original query
-            $rwdata = $this->getRawData($srv_data['query']);
+					if ( ! isset( $done[ $net ] ) && $ip >= ip2long( $low ) && $ip <= ip2long( $high ) ) {
+						$owner = substr( $line, 0, $p - 1 );
 
-            if (!empty($rwdata)) {
-                if (!empty($srv_data['handler'])) {
-                    $this->query['handler'] = $srv_data['handler'];
+						if ( ! empty( $this->REGISTRARS['owner'] ) ) {
+							$this->handle_rwhois( $this->REGISTRARS['owner'], $query );
+							break 2;
+						} else {
+							$this->Query['args'] = 'n ' . $net;
+							$presults[]          = $this->GetRawData( $net );
+							$done[ $net ]        = 1;
+						}
+					}
+					$found = true;
+				}
+			}
 
-                    if (!empty($srv_data['file']))
-                        $this->query['file'] = $srv_data['file'];
-                    else
-                        $this->query['file'] = 'whois.' . $this->query['handler'] . '.php';
-                }
+			if ( ! $found ) {
+				$this->Query['file']    = 'whois.ip.arin.php';
+				$this->Query['handler'] = 'arin';
+				$result                 = $this->parse_results( $result, $rwdata, $query, true );
+			}
+		}
 
-                $result = $this->parse_results($result, $rwdata, $query, $srv_data['reset']);
-                $result = $this->setWhoisInfo($result);
-                $reset = false;
-            }
-        }
+		unset( $this->Query['args'] );
 
+		while ( count( $this->more_data ) > 0 ) {
+			$srv_data              = array_shift( $this->more_data );
+			$this->Query['server'] = $srv_data['server'];
+			unset( $this->Query['handler'] );
+			// Use original query
+			$rwdata = $this->GetRawData( $srv_data['query'] );
 
-        // Normalize nameserver fields
+			if ( ! empty( $rwdata ) ) {
+				if ( ! empty( $srv_data['handler'] ) ) {
+					$this->Query['handler'] = $srv_data['handler'];
 
-        if (isset($result['regrinfo']['network']['nserver'])) {
-            if (!is_array($result['regrinfo']['network']['nserver'])) {
-                unset($result['regrinfo']['network']['nserver']);
-            } else
-                $result['regrinfo']['network']['nserver'] = $this->fixNameServer($result['regrinfo']['network']['nserver']);
-        }
+					if ( ! empty( $srv_data['file'] ) ) {
+						$this->Query['file'] = $srv_data['file'];
+					} else {
+						$this->Query['file'] = 'whois.' . $this->Query['handler'] . '.php';
+					}
+				}
 
-        return $result;
-    }
+				$result = $this->parse_results( $result, $rwdata, $query, $srv_data['reset'] );
+				$result = $this->set_whois_info( $result );
+				$reset  = false;
+			}
+		}
 
-    //-----------------------------------------------------------------
+		// Normalize nameserver fields
 
-    public function parse_results($result, $rwdata, $query, $reset) {
-        $rwres = $this->process($rwdata);
+		if ( isset( $result['regrinfo']['network']['nserver'] ) ) {
+			if ( ! is_array( $result['regrinfo']['network']['nserver'] ) ) {
+				unset( $result['regrinfo']['network']['nserver'] );
+			} else {
+				$result['regrinfo']['network']['nserver'] = $this->FixNameServer( $result['regrinfo']['network']['nserver'] );
+			}
+		}
 
-        if ($result['regyinfo']['type'] == 'AS' && !empty($rwres['regrinfo']['network'])) {
-            $rwres['regrinfo']['AS'] = $rwres['regrinfo']['network'];
-            unset($rwres['regrinfo']['network']);
-        }
+		return $result;
+	}
 
-        if ($reset) {
-            $result['regrinfo'] = $rwres['regrinfo'];
-            $result['rawdata'] = $rwdata;
-        } else {
-            $result['rawdata'][] = '';
+	//-----------------------------------------------------------------
 
-            foreach ($rwdata as $line)
-                $result['rawdata'][] = $line;
+	function parse_results( $result, $rwdata, $query, $reset ) {
+		$rwres = $this->Process( $rwdata );
 
-            foreach ($rwres['regrinfo'] as $key => $data) {
-                $result = $this->join_result($result, $key, $rwres);
-            }
-        }
+		if ( $result['regyinfo']['type'] == 'AS' && ! empty( $rwres['regrinfo']['network'] ) ) {
+			$rwres['regrinfo']['AS'] = $rwres['regrinfo']['network'];
+			unset( $rwres['regrinfo']['network'] );
+		}
 
-        if ($this->deepWhois) {
-            if (isset($rwres['regrinfo']['rwhois'])) {
-                $this->handle_rwhois($rwres['regrinfo']['rwhois'], $query);
-                unset($result['regrinfo']['rwhois']);
-            } else
-            if (!@empty($rwres['regrinfo']['owner']['organization']))
-                switch ($rwres['regrinfo']['owner']['organization']) {
-                    case 'KRNIC':
-                        $this->handle_rwhois('whois.krnic.net', $query);
-                        break;
+		if ( $reset ) {
+			$result['regrinfo'] = $rwres['regrinfo'];
+			$result['rawdata']  = $rwdata;
+		} else {
+			$result['rawdata'][] = '';
 
-                    case 'African Network Information Center':
-                        $this->handle_rwhois('whois.afrinic.net', $query);
-                        break;
-                }
-        }
+			foreach ( $rwdata as $line ) {
+				$result['rawdata'][] = $line;
+			}
 
-        if (!empty($rwres['regyinfo']))
-            $result['regyinfo'] = array_merge($result['regyinfo'], $rwres['regyinfo']);
+			foreach ( $rwres['regrinfo'] as $key => $data ) {
+				$result = $this->join_result( $result, $key, $rwres );
+			}
+		}
 
-        return $result;
-    }
+		if ( $this->deep_whois ) {
+			if ( isset( $rwres['regrinfo']['rwhois'] ) ) {
+				$this->handle_rwhois( $rwres['regrinfo']['rwhois'], $query );
+				unset( $result['regrinfo']['rwhois'] );
+			} elseif ( ! @empty( $rwres['regrinfo']['owner']['organization'] ) ) {
+				switch ( $rwres['regrinfo']['owner']['organization'] ) {
+					case 'KRNIC':
+						$this->handle_rwhois( 'whois.krnic.net', $query );
+						break;
 
-    //-----------------------------------------------------------------
+					case 'African Network Information Center':
+						$this->handle_rwhois( 'whois.afrinic.net', $query );
+						break;
+				}
+			}
+		}
 
-    public function handle_rwhois($server, $query) {
-        // Avoid querying the same server twice
+		if ( ! empty( $rwres['regyinfo'] ) ) {
+			$result['regyinfo'] = array_merge( $result['regyinfo'], $rwres['regyinfo'] );
+		}
 
-        $parts = parse_url($server);
+		return $result;
+	}
 
-        if (empty($parts['host']))
-            $host = $parts['path'];
-        else
-            $host = $parts['host'];
+	//-----------------------------------------------------------------
 
-        if (array_key_exists($host, $this->done))
-            return;
+	function handle_rwhois( $server, $query ) {
+		// Avoid querying the same server twice
 
-        $q = array(
-            'query' => $query,
-            'server' => $server
-        );
+		$parts = parse_url( $server );
 
-        if (isset($this->HANDLERS[$host])) {
-            $q['handler'] = $this->HANDLERS[$host];
-            $q['file'] = sprintf('whois.ip.%s.php', $q['handler']);
-            $q['reset'] = true;
-        } else {
-            $q['handler'] = 'rwhois';
-            $q['reset'] = false;
-            unset($q['file']);
-        }
+		if ( empty( $parts['host'] ) ) {
+			$host = $parts['path'];
+		} else {
+			$host = $parts['host'];
+		}
 
-        $this->more_data[] = $q;
-        $this->done[$host] = 1;
-    }
+		if ( array_key_exists( $host, $this->done ) ) {
+			return;
+		}
 
-    //-----------------------------------------------------------------
+		$q = array(
+			'query'  => $query,
+			'server' => $server,
+		);
 
-    public function join_result($result, $key, $newres) {
-        if (isset($result['regrinfo'][$key]) && !array_key_exists(0, $result['regrinfo'][$key])) {
-            $r = $result['regrinfo'][$key];
-            $result['regrinfo'][$key] = array($r);
-        }
+		if ( isset( $this->HANDLERS[ $host ] ) ) {
+			$q['handler'] = $this->HANDLERS[ $host ];
+			$q['file']    = sprintf( 'whois.ip.%s.php', $q['handler'] );
+			$q['reset']   = true;
+		} else {
+			$q['handler'] = 'rwhois';
+			$q['reset']   = false;
+			unset( $q['file'] );
+		}
 
-        $result['regrinfo'][$key][] = $newres['regrinfo'][$key];
-        return $result;
-    }
+		$this->more_data[]   = $q;
+		$this->done[ $host ] = 1;
+	}
 
+	//-----------------------------------------------------------------
+
+	function join_result( $result, $key, $newres ) {
+		if ( isset( $result['regrinfo'][ $key ] ) && ! array_key_exists( 0, $result['regrinfo'][ $key ] ) ) {
+			$r                          = $result['regrinfo'][ $key ];
+			$result['regrinfo'][ $key ] = array( $r );
+		}
+
+		$result['regrinfo'][ $key ][] = $newres['regrinfo'][ $key ];
+		return $result;
+	}
 }
+
