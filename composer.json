@@ -1,8 +1,8 @@
 {
-    "name": "phpwhois/phpwhois",
+    "name": "ivankristianto/phpwhois",
     "description": "phpWhois - library for querying whois services and parsing results. Based on phpwhois.org",
     "keywords": ["PHP","Whois","phpWhois"],
-    "homepage": "http://phpwhois.pw",
+    "homepage": "http://www.ivankristianto.com/phpwhois",
     "type": "library",
     "license": "GPL-2.0",
     "authors": [
@@ -21,6 +21,10 @@
         {
             "name": "Dmitry Lukashin",
             "email": "dmitry@lukashin.ru"
+        },
+        {
+            "name": "Ivan Kristianto",
+            "email": "ivan@ivankristianto.com"
         }
     ],
     "require": {
