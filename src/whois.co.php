@@ -22,19 +22,20 @@
  * @copyright Copyright (c) 2014 Dmitry Lukashin
  */
 
-if (!defined('__CO_HANDLER__'))
-    define('__CO_HANDLER__', 1);
+if ( ! defined( '__CO_HANDLER__' ) ) {
+	define( '__CO_HANDLER__', 1 );
+}
 
-require_once('whois.parser.php');
+require_once( 'whois.parser.php' );
 
 class co_handler {
 
-    function parse($data_str, $query) {
-        $r = array();
-        $r['regrinfo'] = generic_parser_b($data_str['rawdata'], array(), 'mdy');
-        $r['regyinfo']['referrer'] = 'http://www.cointernet.com.co/';
-        $r['regyinfo']['registrar'] = '.CO Internet, S.A.S.';
-        return $r;
-    }
+	function parse( $data_str, $query ) {
+		$r                          = array();
+		$r['regrinfo']              = generic_parser_b( $data_str['rawdata'], array(), 'mdy' );
+		$r['regyinfo']['referrer']  = 'http://www.cointernet.com.co/';
+		$r['regyinfo']['registrar'] = '.CO Internet, S.A.S.';
+		return $r;
+	}
 
 }
