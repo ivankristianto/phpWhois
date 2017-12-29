@@ -118,6 +118,7 @@ return array(
     'black'                  => 'whois.afilias.net',
     'blackfriday'            => 'whois.uniregistry.net',
     'blue'                   => 'whois.afilias.net',
+    'blog'                   => 'whois.nic.blog',
     'bmw'                    => 'whois.ksregistry.net',
     'bn'                     => 'whois.bn',
     'bo'                     => 'whois.nic.bo',
